@@ -103,4 +103,5 @@ Example output:
 Task,Week 1,Week 2
 Code,7.75,5.89
 Slack,6.39,15.45
+Total,14.14,21.34
 ```

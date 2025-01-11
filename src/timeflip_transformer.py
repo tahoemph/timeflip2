@@ -131,6 +131,9 @@ class TimeflipTransformer:
     def save(self, df: pd.DataFrame, output_file: Union[str, Path]) -> None:
         """Saves the transformed DataFrame to a CSV file."""
         try:
+            # Add total row
+            df.loc['Total'] = df.sum()
+            
             output_path = Path(output_file)
             df.to_csv(output_path)
             logger.info(f"Successfully saved transformed data to {output_path}")

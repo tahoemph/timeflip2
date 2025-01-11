@@ -138,13 +138,17 @@ def test_save_output(sample_timeflip_csv, tmp_path):
 
     # Read and print the saved file for debugging
     print("\nSaved file contents:")
-    saved_df = pd.read_csv(output_file)
+    saved_df = pd.read_csv(output_file, index_col=0)
     print(saved_df)
 
     # Check that the content is correct
-    assert list(saved_df.columns) == ['Task', 'Week 1', 'Week 2']
-    assert abs(float(saved_df.loc[saved_df['Task'] == 'Code', 'Week 1'].iloc[0]) - 7.75) < 0.01
-    assert abs(float(saved_df.loc[saved_df['Task'] == 'Slack', 'Week 2'].iloc[0]) - 15.45) < 0.01
+    assert list(saved_df.columns) == ['Week 1', 'Week 2']
+    assert abs(float(saved_df.loc['Code', 'Week 1']) - 7.75) < 0.01
+    assert abs(float(saved_df.loc['Slack', 'Week 2']) - 15.45) < 0.01
+    
+    # Check total row
+    assert abs(float(saved_df.loc['Total', 'Week 1']) - (7.75 + 6.39)) < 0.01
+    assert abs(float(saved_df.loc['Total', 'Week 2']) - (5.89 + 15.45)) < 0.01
 
 def test_save_simple_format(sample_simple_csv, tmp_path):
     """Test saving transformed simple format data."""
@@ -159,10 +163,14 @@ def test_save_simple_format(sample_simple_csv, tmp_path):
 
     # Read and print the saved file for debugging
     print("\nSaved simple format contents:")
-    saved_df = pd.read_csv(output_file)
+    saved_df = pd.read_csv(output_file, index_col=0)
     print(saved_df)
 
     # Check that the content is correct
-    assert list(saved_df.columns) == ['Task', 'Week 1', 'Week 2']
-    assert abs(float(saved_df.loc[saved_df['Task'] == 'Task A', 'Week 1'].iloc[0]) - 10) < 0.01
-    assert abs(float(saved_df.loc[saved_df['Task'] == 'Task B', 'Week 2'].iloc[0]) - 8) < 0.01
+    assert list(saved_df.columns) == ['Week 1', 'Week 2']
+    assert abs(float(saved_df.loc['Task A', 'Week 1']) - 10) < 0.01
+    assert abs(float(saved_df.loc['Task B', 'Week 2']) - 8) < 0.01
+    
+    # Check total row
+    assert abs(float(saved_df.loc['Total', 'Week 1']) - 15) < 0.01  # 10 + 5
+    assert abs(float(saved_df.loc['Total', 'Week 2']) - 23) < 0.01  # 15 + 8
