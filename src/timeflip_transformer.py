@@ -75,7 +75,10 @@ class TimeflipTransformer:
             try:
                 df = pd.read_csv(self.input_file)
                 if all(col in df.columns for col in ['Task', 'Week', 'Value']):
-                    return self._transform_simple_format(df)
+                    result = self._transform_simple_format(df)
+                    if result.empty:
+                        return pd.DataFrame(columns=['Week 1'])
+                    return result
             except Exception:
                 pass
 
