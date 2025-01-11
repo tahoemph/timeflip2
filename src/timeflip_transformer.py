@@ -14,6 +14,24 @@ class TimeflipTransformer:
         if not self.input_file.exists():
             raise FileNotFoundError(f"Input file not found: {self.input_file}")
     
+    def _transform_simple_format(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Transform simple CSV format (Task,Week,Value)."""
+        try:
+            # Pivot the data
+            result_df = df.pivot(
+                index='Task',
+                columns='Week',
+                values='Value'
+            ).fillna(0)
+            
+            # Rename columns to match expected format
+            result_df.columns = [f'Week {col}' for col in result_df.columns]
+            return result_df
+            
+        except Exception as e:
+            logger.error(f"Error transforming simple format: {str(e)}")
+            raise
+    
     def _parse_weeks(self, df: pd.DataFrame) -> list:
         """Extract weekly data sections from the DataFrame."""
         weeks = []
@@ -39,11 +57,6 @@ class TimeflipTransformer:
     
     def _is_task_row(self, row) -> bool:
         """Check if the row is a valid task row."""
-        # Check if it's a task row by verifying:
-        # 1. Has a task name in column 1
-        # 2. Has a time value in column 2
-        # 3. First column is either '-' or empty
-        # 4. Row doesn't start with 'Tag' (header row)
         return (
             pd.notna(row[1]) and  # Task name exists
             pd.notna(row[2]) and  # Time exists
@@ -53,11 +66,20 @@ class TimeflipTransformer:
     
     def transform(self) -> pd.DataFrame:
         """
-        Reads the Timeflip2 CSV and transforms it to task-based weekly format.
+        Reads the CSV and transforms it to task-based weekly format.
+        Handles both simple (Task,Week,Value) and complex Timeflip2 formats.
         Returns transformed DataFrame.
         """
         try:
-            # Read the CSV file with semicolon delimiter
+            # First try reading as simple CSV
+            try:
+                df = pd.read_csv(self.input_file)
+                if all(col in df.columns for col in ['Task', 'Week', 'Value']):
+                    return self._transform_simple_format(df)
+            except Exception:
+                pass
+                
+            # If that fails, try Timeflip2 format
             df = pd.read_csv(self.input_file, sep=';', header=None)
             
             # Extract weekly sections
@@ -80,6 +102,11 @@ class TimeflipTransformer:
                             except (ValueError, TypeError):
                                 logger.warning(f"Invalid time value for task {task_name}: {row[2]}")
                                 all_tasks[task_name].append(0.0)
+            
+            # Handle empty data
+            if not all_tasks:
+                logger.warning("No tasks found in the input file")
+                return pd.DataFrame(columns=['Week 1'])
             
             # Ensure all tasks have the same number of weeks
             max_weeks = max(len(times) for times in all_tasks.values())
