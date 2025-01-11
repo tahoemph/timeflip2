@@ -8,6 +8,9 @@
 Follow these guidelines to ensure your code is clean, maintainable, and adheres to best practices. 
 **Remember, less code is better.**
 **Lines of code = Debt.**
+**Don't use tags, use spaces.**
+**Follow PEP8 in all coding.**
+**Do not leave extra spaces on lines.**
 
 # Key Mindsets
 **1** **Simplicity**: Write simple and straightforward code.
