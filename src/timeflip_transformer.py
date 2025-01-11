@@ -77,7 +77,7 @@ class TimeflipTransformer:
                 if all(col in df.columns for col in ['Task', 'Week', 'Value']):
                     result = self._transform_simple_format(df)
                     if result.empty:
-                        return pd.DataFrame(columns=['Week 1'])
+                        return pd.DataFrame(columns=['Task', 'Week 1'])
                     return result
             except Exception:
                 pass
@@ -109,7 +109,7 @@ class TimeflipTransformer:
             # Handle empty data
             if not all_tasks:
                 logger.warning("No tasks found in the input file")
-                return pd.DataFrame(columns=['Week 1'])
+                return pd.DataFrame(columns=['Task', 'Week 1'])
 
             # Ensure all tasks have the same number of weeks
             max_weeks = max(len(times) for times in all_tasks.values())
@@ -120,6 +120,7 @@ class TimeflipTransformer:
             # Create result DataFrame
             result_df = pd.DataFrame.from_dict(all_tasks, orient='index')
             result_df.columns = [f'Week {i+1}' for i in range(len(result_df.columns))]
+            result_df.index.name = 'Task'
 
             return result_df
 

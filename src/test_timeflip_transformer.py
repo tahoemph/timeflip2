@@ -122,7 +122,7 @@ def test_transform_empty_data(empty_csv):
     assert isinstance(result, pd.DataFrame)
 
     # Check that we have the expected empty structure
-    assert list(result.columns) == ['Week 1']
+    assert list(result.columns) == ['Task', 'Week 1']
     assert len(result) == 0
 
 def test_save_output(sample_timeflip_csv, tmp_path):
@@ -138,13 +138,13 @@ def test_save_output(sample_timeflip_csv, tmp_path):
 
     # Read and print the saved file for debugging
     print("\nSaved file contents:")
-    saved_df = pd.read_csv(output_file, index_col=0)
+    saved_df = pd.read_csv(output_file)
     print(saved_df)
 
     # Check that the content is correct
-    assert list(saved_df.columns) == ['Week 1', 'Week 2']
-    assert abs(float(saved_df.loc['Code', 'Week 1']) - 7.75) < 0.01
-    assert abs(float(saved_df.loc['Slack', 'Week 2']) - 15.45) < 0.01
+    assert list(saved_df.columns) == ['Task', 'Week 1', 'Week 2']
+    assert abs(float(saved_df.loc[saved_df['Task'] == 'Code', 'Week 1'].iloc[0]) - 7.75) < 0.01
+    assert abs(float(saved_df.loc[saved_df['Task'] == 'Slack', 'Week 2'].iloc[0]) - 15.45) < 0.01
 
 def test_save_simple_format(sample_simple_csv, tmp_path):
     """Test saving transformed simple format data."""
@@ -159,10 +159,10 @@ def test_save_simple_format(sample_simple_csv, tmp_path):
 
     # Read and print the saved file for debugging
     print("\nSaved simple format contents:")
-    saved_df = pd.read_csv(output_file, index_col=0)
+    saved_df = pd.read_csv(output_file)
     print(saved_df)
 
     # Check that the content is correct
-    assert list(saved_df.columns) == ['Week 1', 'Week 2']
-    assert abs(float(saved_df.loc['Task A', 'Week 1']) - 10) < 0.01
-    assert abs(float(saved_df.loc['Task B', 'Week 2']) - 8) < 0.01
+    assert list(saved_df.columns) == ['Task', 'Week 1', 'Week 2']
+    assert abs(float(saved_df.loc[saved_df['Task'] == 'Task A', 'Week 1'].iloc[0]) - 10) < 0.01
+    assert abs(float(saved_df.loc[saved_df['Task'] == 'Task B', 'Week 2'].iloc[0]) - 8) < 0.01
