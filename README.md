@@ -37,13 +37,17 @@ pip install -r requirements.txt
 
 ## Usage
 
-1. Place your Timeflip2 CSV export in the `data` directory
-2. Run the transformer:
+1. Run the transformer with your input file:
 ```bash
-python src/main.py
+python src/main.py path/to/your/input.csv
 ```
 
-The transformed output will be saved as `data/transformed_output.csv`
+You can also specify a custom output location:
+```bash
+python src/main.py path/to/your/input.csv -o path/to/output.csv
+```
+
+By default, the transformed output will be saved as `data/transformed_output.csv`
 
 ## Development
 
