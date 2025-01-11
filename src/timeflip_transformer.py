@@ -36,19 +36,34 @@ class TimeflipTransformer:
         """Extract weekly data sections from the DataFrame."""
         weeks = []
         current_week = None
+        current_date = None
 
         for idx, row in df.iterrows():
             if isinstance(row[0], str) and row[0].startswith('Week #'):
                 if current_week is not None:
-                    weeks.append(pd.DataFrame(current_week))
+                    weeks.append((current_date, pd.DataFrame(current_week)))
                 current_week = []
+                # Extract the first date from the row (index 4 is Sunday's date)
+                current_date = row[4] if len(row) > 4 and pd.notna(row[4]) else None
             elif current_week is not None:
                 current_week.append(row)
 
         if current_week:
-            weeks.append(pd.DataFrame(current_week))
+            weeks.append((current_date, pd.DataFrame(current_week)))
 
         return weeks
+
+    def _format_week_header(self, date_str: str, week_num: int) -> str:
+        """Format the week header using the date if available."""
+        if pd.isna(date_str):
+            return f"Week {week_num}"
+        try:
+            # Parse the date string (assuming DD.MM.YYYY format)
+            from datetime import datetime
+            date = datetime.strptime(date_str, "%d.%m.%Y")
+            return date.strftime("%Y-%m-%d")
+        except (ValueError, TypeError):
+            return f"Week {week_num}"
 
     def _clean_task_name(self, row) -> str:
         """Clean task name by removing leading dash if present."""
@@ -91,7 +106,7 @@ class TimeflipTransformer:
             # Process each week's data
             all_tasks = {}
 
-            for week_df in weeks:
+            for week_num, (date, week_df) in enumerate(weeks):
                 # Find the task rows
                 for idx, row in week_df.iterrows():
                     if self._is_task_row(row):
@@ -119,7 +134,7 @@ class TimeflipTransformer:
 
             # Create result DataFrame
             result_df = pd.DataFrame.from_dict(all_tasks, orient='index')
-            result_df.columns = [f'Week {i+1}' for i in range(len(result_df.columns))]
+            result_df.columns = [self._format_week_header(week[0], i+1) for i, week in enumerate(weeks)]
             result_df.index.name = 'Task'
 
             return result_df

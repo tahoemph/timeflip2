@@ -81,14 +81,14 @@ def test_transform_success(sample_timeflip_csv):
     # Check that the result is a DataFrame
     assert isinstance(result, pd.DataFrame)
 
-    # Check column names
-    assert list(result.columns) == ['Week 1', 'Week 2']
+    # Check column names (should be dates)
+    assert list(result.columns) == ['2024-12-29', '2025-01-05']
 
     # Check values with approximate equality
-    assert abs(result.loc['Code', 'Week 1'] - 7.75) < 0.01
-    assert abs(result.loc['Code', 'Week 2'] - 5.89) < 0.01
-    assert abs(result.loc['Slack', 'Week 1'] - 6.39) < 0.01
-    assert abs(result.loc['Slack', 'Week 2'] - 15.45) < 0.01
+    assert abs(result.loc['Code', '2024-12-29'] - 7.75) < 0.01
+    assert abs(result.loc['Code', '2025-01-05'] - 5.89) < 0.01
+    assert abs(result.loc['Slack', '2024-12-29'] - 6.39) < 0.01
+    assert abs(result.loc['Slack', '2025-01-05'] - 15.45) < 0.01
 
 def test_transform_simple_format(sample_simple_csv):
     """Test transformation of simple CSV format."""
@@ -122,7 +122,7 @@ def test_transform_empty_data(empty_csv):
     assert isinstance(result, pd.DataFrame)
 
     # Check that we have the expected empty structure
-    assert list(result.columns) == ['Task', 'Week 1']
+    assert list(result.columns) == ['Week 1']  # Empty data just gets a single week column
     assert len(result) == 0
 
 def test_save_output(sample_timeflip_csv, tmp_path):
@@ -142,13 +142,13 @@ def test_save_output(sample_timeflip_csv, tmp_path):
     print(saved_df)
 
     # Check that the content is correct
-    assert list(saved_df.columns) == ['Week 1', 'Week 2']
-    assert abs(float(saved_df.loc['Code', 'Week 1']) - 7.75) < 0.01
-    assert abs(float(saved_df.loc['Slack', 'Week 2']) - 15.45) < 0.01
+    assert list(saved_df.columns) == ['2024-12-29', '2025-01-05']
+    assert abs(float(saved_df.loc['Code', '2024-12-29']) - 7.75) < 0.01
+    assert abs(float(saved_df.loc['Slack', '2025-01-05']) - 15.45) < 0.01
     
     # Check total row
-    assert abs(float(saved_df.loc['Total', 'Week 1']) - (7.75 + 6.39)) < 0.01
-    assert abs(float(saved_df.loc['Total', 'Week 2']) - (5.89 + 15.45)) < 0.01
+    assert abs(float(saved_df.loc['Total', '2024-12-29']) - (7.75 + 6.39)) < 0.01
+    assert abs(float(saved_df.loc['Total', '2025-01-05']) - (5.89 + 15.45)) < 0.01
 
 def test_save_simple_format(sample_simple_csv, tmp_path):
     """Test saving transformed simple format data."""

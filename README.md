@@ -100,7 +100,7 @@ The tool generates a CSV with:
 
 Example output:
 ```csv
-Task,Week 1,Week 2
+Task,2024-12-29,2025-01-05
 Code,7.75,5.89
 Slack,6.39,15.45
 Total,14.14,21.34
