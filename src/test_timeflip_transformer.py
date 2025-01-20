@@ -67,8 +67,14 @@ def test_parse_weeks(sample_timeflip_csv):
         print(week)
 
     assert len(weeks) == 2  # Should find two weeks
-    assert any('Code' in str(row[1]) and '7.75' in str(row[2]) for _, row in weeks[0].iterrows())  # Week 1 data
-    assert any('Slack' in str(row[1]) and '15.45' in str(row[2]) for _, row in weeks[1].iterrows())  # Week 2 data
+    # Check the tuple structure (date, dataframe) for each week
+    week1_date, week1_data = weeks[0]
+    week2_date, week2_data = weeks[1]
+    
+    assert week1_date == '29.12.2024'
+    assert week2_date == '05.01.2025'
+    assert any('Code' in str(row[1]) and '7.75' in str(row[2]) for _, row in week1_data.iterrows())
+    assert any('Slack' in str(row[1]) and '15.45' in str(row[2]) for _, row in week2_data.iterrows())
 
 def test_transform_success(sample_timeflip_csv):
     """Test successful transformation of Timeflip2 data."""
@@ -122,7 +128,7 @@ def test_transform_empty_data(empty_csv):
     assert isinstance(result, pd.DataFrame)
 
     # Check that we have the expected empty structure
-    assert list(result.columns) == ['Week 1']  # Empty data just gets a single week column
+    assert list(result.columns) == ['Task', 'Week 1']  # Empty data includes Task column
     assert len(result) == 0
 
 def test_save_output(sample_timeflip_csv, tmp_path):
