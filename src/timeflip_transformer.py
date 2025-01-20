@@ -37,18 +37,25 @@ class TimeflipTransformer:
         weeks = []
         current_week = None
         current_date = None
+        skip_next_row = False  # Flag to skip the header row after Week #
 
         for idx, row in df.iterrows():
             if isinstance(row[0], str) and row[0].startswith('Week #'):
-                if current_week is not None:
+                if current_week is not None and current_date is not None:
                     weeks.append((current_date, pd.DataFrame(current_week)))
                 current_week = []
-                # Extract the first date from the row (index 4 is Sunday's date)
-                current_date = row[4] if len(row) > 4 and pd.notna(row[4]) else None
+                # Find the first non-empty date in the row (starting from index 4)
+                for i in range(4, len(row)):
+                    if pd.notna(row[i]):
+                        current_date = row[i]
+                        break
+                skip_next_row = True  # Skip the next row (header)
+            elif skip_next_row:
+                skip_next_row = False  # Reset the flag
             elif current_week is not None:
                 current_week.append(row)
 
-        if current_week:
+        if current_week and current_date is not None:
             weeks.append((current_date, pd.DataFrame(current_week)))
 
         return weeks
@@ -67,17 +74,44 @@ class TimeflipTransformer:
 
     def _clean_task_name(self, row) -> str:
         """Clean task name by removing leading dash if present."""
-        task_name = str(row[1])
-        return task_name.strip() if pd.notna(task_name) else None
+        task_name = str(row[1]).strip()
+        return task_name if pd.notna(task_name) and task_name != 'Task' else None
 
     def _is_task_row(self, row) -> bool:
         """Check if the row is a valid task row."""
-        return (
-            pd.notna(row[1]) and  # Task name exists
-            pd.notna(row[2]) and  # Time exists
-            (pd.isna(row[0]) or str(row[0]).strip() in ['-', '']) and  # First column is '-' or empty
-            str(row[1]).strip() != 'Task'  # Not a header row
-        )
+        if not (pd.notna(row[1]) and pd.notna(row[2])):  # Task name and time must exist
+            return False
+            
+        task_name = str(row[1]).strip()
+        if task_name == 'Task':  # Skip header row
+            return False
+            
+        # Skip summary rows
+        skip_prefixes = ['Subtotal', 'Day total', 'Hours total']
+        if any(task_name.startswith(prefix) for prefix in skip_prefixes):
+            return False
+            
+        return True
+
+    def _get_task_time(self, row) -> float:
+        """Get task time by validating total against daily breakdowns."""
+        try:
+            # Get the total time from column 2
+            total_time = float(row[2]) if pd.notna(row[2]) else 0.0
+            
+            # Calculate sum of daily values (columns 4-10 for Sun-Sat)
+            daily_times = [float(t) if pd.notna(t) else 0.0 for t in row[4:11]]
+            daily_sum = sum(daily_times)
+            
+            # If there's a significant difference and we have daily values, use the daily sum
+            if daily_sum > 0 and abs(total_time - daily_sum) > 0.01:  # Allow for small floating point differences
+                logger.warning(f"Time mismatch for task {row[1]}: total={total_time}, daily sum={daily_sum}")
+                return daily_sum
+                
+            return total_time
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid time value for task {row[1]}: {row[2]}")
+            return 0.0
 
     def transform(self) -> pd.DataFrame:
         """
@@ -105,36 +139,34 @@ class TimeflipTransformer:
 
             # Process each week's data
             all_tasks = {}
+            week_dates = []  # Store week dates in order
 
             for week_num, (date, week_df) in enumerate(weeks):
-                # Find the task rows
+                week_dates.append(date)  # Store the date
+                # Process task rows
                 for idx, row in week_df.iterrows():
                     if self._is_task_row(row):
                         task_name = self._clean_task_name(row)
                         if task_name:
                             if task_name not in all_tasks:
-                                all_tasks[task_name] = []
-                            try:
-                                time_value = float(row[2])
-                                all_tasks[task_name].append(time_value)
-                            except (ValueError, TypeError):
-                                logger.warning(f"Invalid time value for task {task_name}: {row[2]}")
-                                all_tasks[task_name].append(0.0)
+                                # Initialize with zeros for all previous weeks
+                                all_tasks[task_name] = [0.0] * week_num
+                            time_value = self._get_task_time(row)
+                            all_tasks[task_name].append(time_value)
+                
+                # Ensure all tasks have a value for this week
+                for task in all_tasks:
+                    if len(all_tasks[task]) <= week_num:
+                        all_tasks[task].append(0.0)
 
             # Handle empty data
             if not all_tasks:
                 logger.warning("No tasks found in the input file")
                 return pd.DataFrame(columns=['Task', 'Week 1'])
 
-            # Ensure all tasks have the same number of weeks
-            max_weeks = max(len(times) for times in all_tasks.values())
-            for task in all_tasks:
-                while len(all_tasks[task]) < max_weeks:
-                    all_tasks[task].append(0.0)
-
             # Create result DataFrame
             result_df = pd.DataFrame.from_dict(all_tasks, orient='index')
-            result_df.columns = [self._format_week_header(week[0], i+1) for i, week in enumerate(weeks)]
+            result_df.columns = [self._format_week_header(date, i+1) for i, date in enumerate(week_dates)]
             result_df.index.name = 'Task'
 
             return result_df
